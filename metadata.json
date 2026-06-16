@@ -1,0 +1,6 @@
+{
+  "name": "Bilişim Teknolojileri Tekrar Chatbotu",
+  "description": "5. ve 6. Sınıf Bilişim Teknolojileri ve Yazılım dersi için eğitici ve eğlenceli tekrar chatbotu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
