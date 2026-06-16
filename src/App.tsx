@@ -25,6 +25,158 @@ import { motion, AnimatePresence } from "motion/react";
 import { LEARNING_UNITS, UnitKey, LearningUnit } from "./types";
 import { db, StudentStats, StudentSession, ChatMessage } from "./lib/supabase";
 
+export interface FallbackQuestion {
+  text: string;
+  question: string;
+  options: string[];
+  correctOption: string;
+  feedbackIfCorrect: string;
+  feedbackIfIncorrect: string;
+}
+
+const FALLBACK_QUESTIONS: Record<UnitKey, FallbackQuestion[]> = {
+  [UnitKey.DIGITAL_CITIZENSHIP]: [
+    {
+      text: "Güvenli internet kullanımı her şeyden önce gelir! Kişisel bilgilerinizin korunması en önemli kurallardandır.",
+      question: "Güvendiğimiz bir oyun sitesi bile olsa bizden T.C. Kimlik numaramızı veya ev adresimizi isterse ne yapmalıyız?",
+      options: [
+        "A) Oyun oynamak için hemen vermeliyiz.",
+        "B) Hayır, kişisel bilgilerimizi kesinlikle paylaşmamalıyız.",
+        "C) Öylesine uydurma bir numara yazıp devam etmeliyiz."
+      ],
+      correctOption: "B",
+      feedbackIfCorrect: "Harika! Kesinlikle doğru bildin. 🎉 Kişisel bilgiler siber hırsızların eline geçebilir. Kendini korumak en öncelikli kuralımız! +10 XP kazandın!",
+      feedbackIfIncorrect: "Dikkatli olmalısın! 💡 Oyun siteleri dahi olsa internette hiçbir platformda T.C. Kimlik numarası, şifre veya adresimizi kesinlikle paylaşmamalıyız. +2 Katılım XP!"
+    },
+    {
+      text: "Süper! Şimdi ikinci konumuz: **Güçlü Şifre Oluşturma**! Hesaplarımızın korunması için şifrelerin başkaları tarafından kolay tahmin edilememesi gerekir.",
+      question: "Sence aşağıdaki seçeneklerden hangisi en GÜVENLİ şifre örneğidir?",
+      options: [
+        "A) 123456bilişim",
+        "B) benimbilgisayarım",
+        "C) BiliS1m_2026!"
+      ],
+      correctOption: "C",
+      feedbackIfCorrect: "Mükemmel! En az bir büyük harf, küçük harf, rakam ve özel karakter içeren şifreler siber saldırılardan en iyi şekilde korur. +10 XP kazandın!",
+      feedbackIfIncorrect: "Denemek öğrenmenin en güzel yoludur! Şifremiz kolay kelimeler, doğum tarihi veya ardışık sayılar barındırmamalı, karmaşık ve özel karakterli olmalıdır. +2 Katılım XP!"
+    },
+    {
+      text: "Harika gidiyorsun! Sırada **Dijital Ayak İzi** var. İnternette paylaştığımız fotoğraf, yorum ve yaptığımız her arama arkamızda silinmeyen kalıcı izler bırakır.",
+      question: "Dijital ayak izimizin gelecekte bizi üzmemesi için paylaşım yaparken hangisine en çok dikkat etmeliyiz?",
+      options: [
+        "A) Her aklımıza geleni hemen paylaşıp ertesi gün silmeliyiz.",
+        "B) Paylaşım yapmadan önce iki kez düşünmeli, saygılı ve dikkatli olmalıyız.",
+        "C) Sadece arkadaşlarımızın göreceği şekilde her türlü sırrımızı yayınlamalıyız."
+      ],
+      correctOption: "B",
+      feedbackIfCorrect: "Süpersin! İnternete yüklenen bilgiler kolay kolay kaybolmaz; bu yüzden her paylaşımı iyice düşünerek yapmalıyız. +10 XP kazandın!",
+      feedbackIfIncorrect: "Hiç üzülme! Dijital dünyada paylaştıklarımız silinse bile başkaları tarafından kaydedilebilir, bu yüzden her yayından önce çok iyi düşünmeliyiz. +2 Katılım XP!"
+    }
+  ],
+  [UnitKey.HARDWARE_SOFTWARE]: [
+    {
+      text: "Bilgisayarın kapağını kaldırıp içindeki sihirli mikroçipleri keşfetmeye hazır mısın?",
+      question: "Bilgisayarın beyni olarak kabul edilen, saniyede milyonlarca işlem yapan ve tüm donanımları yöneten iç donanım bileşeni hangisidir?",
+      options: [
+        "A) İşlemci (CPU)",
+        "B) Anakart",
+        "C) Sabit Disk (HDD)"
+      ],
+      correctOption: "A",
+      feedbackIfCorrect: "Aynen öyle! İşlemci (CPU), bilgisayarın beynidir ve tüm komutları o işler. Harika, +10 XP kazandın! 🎉",
+      feedbackIfIncorrect: "Öğrenmeye devam! Bilgisayarın beyni, saniyede milyarlarca işi sırayla çözen İşlemci yani CPU'dur. +2 Katılım XP!"
+    },
+    {
+      text: "Süper, şimdi sırada geçici bellek var. Bilgisayar açıkken o an çalışan uygulamaların ve pencerelerin çalışma verilerini geçici hafızasında tutan parça.",
+      question: "Bilgisayar kapatıldığında içindeki tüm verileri sıfırlanan bu geçici bellek birimi hangisidir?",
+      options: [
+        "A) Sabit Disk (Storage)",
+        "B) RAM Bellek",
+        "C) Ekran Kartı"
+      ],
+      correctOption: "B",
+      feedbackIfCorrect: "Doğru Cevap! RAM (Rastgele Erişimli Bellek) ne kadar yüksekse, bilgisayarımız aynı anda o kadar çok uygulamayı kasmadan ve hızlıca çalıştırabilir. +10 XP!",
+      feedbackIfIncorrect: "Çok normal! Doğru cevap **RAM Bellek** olacaktı. Bilgisayar kapatıldığında içindeki verileri sıfırlayan geçici çalışma masası RAM bellektir. +2 Katılım XP!"
+    },
+    {
+      text: "Harika! Şimdi yazılım dünyasına bakalım. Bilgisayarların ve akıllı telefonların açılabilmesini sağlayan, tüm uygulamaları yöneten en temel yazılıma İşletim Sistemi diyoruz.",
+      question: "Aşağıdaki yazılımlardan hangisi Türkiye'de geliştirilen açık kaynak kodlu milli işletim sistemimizdir?",
+      options: [
+        "A) Windows",
+        "B) Pardus",
+        "C) Android"
+      ],
+      correctOption: "B",
+      feedbackIfCorrect: "Harikasın! Pardus, TÜBİTAK tarafından geliştirilen gururumuz, açık kaynak kodlu milli işletim sistemimizdir. +10 XP!",
+      feedbackIfIncorrect: "Hiç üzülme! Doğru cevap TÜBİTAK tarafından geliştirilen milli işletim sistemimiz olan **Pardus** olacaktı. +2 Katılım XP!"
+    }
+  ],
+  [UnitKey.NETWORKS_INTERNET]: [
+    {
+      text: "Bilgisayarların birbiriyle konuşmasını sağlayan sihirli ağlara göz atalım.",
+      question: "Aynı oda, laboratuvar veya aynı okul binası gibi dar bir alandaki bilgisayarları birbirine bağlayan ağ türüne ne denir?",
+      options: [
+        "A) LAN (Yerel Alan Ağı)",
+        "B) WAN (Geniş Alan Ağı)",
+        "C) PAN (Kişisel Alan Ağı)"
+      ],
+      correctOption: "A",
+      feedbackIfCorrect: "Tebrikler! LAN (Local Area Network) yerel bir bölgedeki okul, laboratuvar veya ev ağları için kullanılır. +10 XP!",
+      feedbackIfIncorrect: "Harika bir deneme! Okul içi veya laboratuvarlardaki gibi kısıtlı ve dar alandaki bağlantılara **LAN (Yerel Alan Ağı)** diyoruz. +2 Katılım XP!"
+    },
+    {
+      text: "Harika! Şimdi internetin adres kurallarına bakalım. İnternete bağlı her cihazın benzersiz bir kimlik numarası vardır.",
+      question: "İnternete bağlanan her bilgisayara otomatik verilen, cihazların birbiriyle iletişim kurmasını sağlayan bu adrese ne isim verilir?",
+      options: [
+        "A) IP Adresi",
+        "B) HTML Kodu",
+        "C) E-Posta Adresi"
+      ],
+      correctOption: "A",
+      feedbackIfCorrect: "Tam isabet! IP Adresi (Internet Protocol), internete bağlı her cihazın benzersiz adresidir ve iletişimi sağlar. +10 XP!",
+      feedbackIfIncorrect: "Yavaş yavaş öğreneceğiz! Cihazların internetteki ev adresi gibi olan benzersiz adreslerine **IP Adresi** denir. +2 Katılım XP!"
+    }
+  ],
+  [UnitKey.ALGORITHMS_CODING]: [
+    {
+      text: "Harika bir seçim: **Problem Çözme & Algoritmalar**! Bilgilerimizi sıralı adımlarla inşa edeceğiz.",
+      question: "Bir problemin çözümü için tasarlanan, başlangıcı ve bitişi belli olan, mantıklı ve sıralı adımlar bütününe ne ad verilir?",
+      options: [
+        "A) Değişken",
+        "B) Algoritma",
+        "C) Döngü"
+      ],
+      correctOption: "B",
+      feedbackIfCorrect: "Muhteşem! Algoritma, kodlamanın temel yol haritasıdır ve her program bir algoritmayla başlar. +10 XP kazandın! 🎉",
+      feedbackIfIncorrect: "Hiç canını sıkma! Bir problemin adım adım pratik çözüm planına **Algoritma** denir. En başından sonuna kadar planlı adımlardan oluşur. +2 Katılım XP!"
+    },
+    {
+      text: "Süper! Algoritmalarda bazı kararları şartlara bağlarız. Örneğin: 'Hava yağmurlu ise şemsiye al'.",
+      question: "Scratch veya blok programlamada, bir işlemin belirli bir şarta bağlı olarak çalıştırılmasını sağlayan blok hangisidir?",
+      options: [
+        "A) Sürekli Tekrar Et",
+        "B) Eğer ... ise (If statement)",
+        "C) 10 Defa Dön"
+      ],
+      correctOption: "B",
+      feedbackIfCorrect: "Kesinlikle doğru! 'Eğer ... ise' bloğu yazılımların mantıklı seçimler ve kararlar vermesini sağlar. +10 XP!",
+      feedbackIfIncorrect: "Öğrenmeye devam! Bir durumun gerçekleşip gerçekleşmediğini kontrol eden kontrol kodumuz **Eğer ... ise** bloğudur. +2 Katılım XP!"
+    },
+    {
+      text: "Harikasın! Son sorumuza gelelim. Algoritmalarda sürekli tekrarlanan şeyleri tek tek yazarak vakit kaybetmek istemeyiz.",
+      question: "Aynı kod grubunu belirli bir sayıda veya şart sağlandığı sürece arka arkaya çalıştırmak için kullanılan yapıya ne denir?",
+      options: [
+        "A) Döngü (Loop)",
+        "B) Değişken",
+        "C) Algoritma Başlangıcı"
+      ],
+      correctOption: "A",
+      feedbackIfCorrect: "Müthişsin! Döngüler, kodlarımızın gereksiz yere uzamasını engelleyen akıllı tekrarlama yapılarıdır. +10 XP!",
+      feedbackIfIncorrect: "Harika bir deneme! Tekrarlayan kod bloklarını çalıştırmak için kullanılan yapıya **Döngü (Loop)** adı verilir. +2 Katılım XP!"
+    }
+  ]
+};
+
 export default function App() {
   // Session / Authentication state
   const [studentName, setStudentName] = useState<string>(() => {
@@ -41,6 +193,8 @@ export default function App() {
   const [messages, setMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [userAnswer, setUserAnswer] = useState<string>("");
+  const [fallbackIndex, setFallbackIndex] = useState<number>(0);
+  const [showLogoutModal, setShowLogoutModal] = useState<boolean>(false);
   
   // Stats and Rewards Tracker (gamified)
   const [totalXp, setTotalXp] = useState<number>(0);
@@ -97,14 +251,17 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    if (confirm("Çıkış yapmak istediğine emin misin? Bilgilerin tarayıcında saklanmaya devam edecek!")) {
-      localStorage.removeItem("bilibot_student_name");
-      setStudentName("");
-      setIsLoggedIn(false);
-      setSelectedUnit(null);
-      setMessages([]);
-      setActiveTab("dashboard");
-    }
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    localStorage.removeItem("bilibot_student_name");
+    setStudentName("");
+    setIsLoggedIn(false);
+    setSelectedUnit(null);
+    setMessages([]);
+    setActiveTab("dashboard");
+    setShowLogoutModal(false);
   };
 
   // Start chatbot learning session with specific topic selection
@@ -113,6 +270,7 @@ export default function App() {
     setActiveTab("chat");
     setIsLoading(true);
     setMascotState("ponder");
+    setFallbackIndex(0);
 
     // Generate unique session ID
     const sessionId = `sess_${unit.key}_${Date.now()}`;
@@ -172,12 +330,16 @@ export default function App() {
     } catch (error) {
       console.error("Session start error:", error);
       // Hardcoded offline content fallback inside UI in case API fails
+      const currentUnitKey = unit.key || UnitKey.DIGITAL_CITIZENSHIP;
+      const questionsList = FALLBACK_QUESTIONS[currentUnitKey] || FALLBACK_QUESTIONS[UnitKey.DIGITAL_CITIZENSHIP];
+      const initialFallbackQuestion = questionsList[0];
+
       setMessages([
         {
           role: "assistant",
-          text: `Merhaba ${studentName}! 🤖 Harika bir seçim: **${unit.title}**! Şimdi seninle bu konuyu harika bir şekilde işleyeceğiz.\n\nİnternette gezinirken bazı kurallarımız var. Mesela girdiğimiz her sitede kişisel sırlarımızı (şifre, adres vb.) vermemeliyiz.`,
-          question: `Sence, güvendiğimiz bir oyun sitesi bizden T.C. Kimlik numaramızı isterse bunu vermeliyiz miyiz?`,
-          options: ["A) Evet, oyun oynamak için vermeliyiz.", "B) Hayır, kesinlikle vermemeliyiz.", "C) Anneme sorup öyle vermeliyim."],
+          text: `Merhaba ${studentName}! 🤖 Harika bir seçim: **${unit.title}**! Şimdi seninle bu konuyu harika bir şekilde işleyeceğiz.\n\n${initialFallbackQuestion.text}`,
+          question: initialFallbackQuestion.question,
+          options: initialFallbackQuestion.options,
           topic: unit.title
         }
       ]);
@@ -347,18 +509,111 @@ export default function App() {
     } catch (err) {
       console.error("Chat error:", err);
       // Fallback response inside UI
-      setTimeout(() => {
-        setMascotState("smile");
-        const defaultReply = {
-          role: "assistant",
-          text: `Süper! Bu harika cevabınla konuyu iyice kavramış olduğunu görüyorum. 🌟 Sana bilgi dünyasında kocaman bir adım attın!`,
-          question: `Peki sence, bilgisayarımızın beyni olarak kabul edilen ve saniyede milyonlarca işlem yapan iç donanım bileşeni hangisidir?`,
-          options: ["A) İşlemci (CPU)", "B) Anakart", "C) Sabit Disk (HDD)"],
-          topic: selectedUnit?.title || "Bilişim"
-        };
+      setTimeout(async () => {
+        const currentUnitKey = selectedUnit?.key || UnitKey.DIGITAL_CITIZENSHIP;
+        const questionsList = FALLBACK_QUESTIONS[currentUnitKey] || FALLBACK_QUESTIONS[UnitKey.DIGITAL_CITIZENSHIP];
+        const currentQuestionObj = questionsList[fallbackIndex];
+        
+        let isCorrect = false;
+        if (currentQuestionObj) {
+          isCorrect = answerText.toUpperCase().trim().startsWith(currentQuestionObj.correctOption.toUpperCase());
+        }
+
+        // Handle XP and feedback popup based on correctness
+        let earnedXp = 5;
+        let feedbackText = "";
+        
+        if (isCorrect) {
+          setMascotState("excited");
+          earnedXp = 10;
+          triggerXpAward(10);
+          feedbackText = currentQuestionObj.feedbackIfCorrect;
+          setLastFeedback({
+            isCorrect: true,
+            show: true,
+            explanation: currentQuestionObj.feedbackIfCorrect
+          });
+        } else {
+          setMascotState("sad");
+          earnedXp = 2;
+          triggerXpAward(2);
+          feedbackText = currentQuestionObj ? currentQuestionObj.feedbackIfIncorrect : "Denemek öğrenmenin en güzel yoludur! +2 Katılım XP!";
+          setLastFeedback({
+            isCorrect: false,
+            show: true,
+            explanation: feedbackText
+          });
+        }
+
+        setTimeout(() => {
+          setLastFeedback(prev => prev ? { ...prev, show: false } : null);
+        }, 4500);
+
+        // Update Stats in Database
+        try {
+          await db.updateStats({
+            student_name: studentName,
+            topic: selectedUnit?.title || "Genel Bilişim",
+            correct_answers: isCorrect ? 1 : 0,
+            total_questions: 1,
+            xp: earnedXp
+          });
+        } catch (dbErr) {
+          console.error("Failed to update stats in DB:", dbErr);
+        }
+
+        // Go to next question
+        const nextIndex = fallbackIndex + 1;
+        setFallbackIndex(nextIndex);
+
+        let defaultReply;
+        if (nextIndex < questionsList.length) {
+          const nextQuestionObj = questionsList[nextIndex];
+          defaultReply = {
+            role: "assistant",
+            text: `${feedbackText}\n\n${nextQuestionObj.text}`,
+            question: nextQuestionObj.question,
+            options: nextQuestionObj.options,
+            topic: selectedUnit?.title || "Bilişim"
+          };
+        } else {
+          // Unit complete!
+          defaultReply = {
+            role: "assistant",
+            text: `${feedbackText}\n\n🎉 Tebrikler! **${selectedUnit?.title}** ünitesinin tüm tekrar sorularını başarıyla tamamladın! Harika bir Bilişim Savaşçısı oldun. Bir diğer üniteyi pekiştirmek için sol üstteki geri tuşuna basarak yeni bir mücadeleye başlayabilirsin! 🏆🚀`,
+            question: undefined,
+            options: [],
+            topic: selectedUnit?.title || "Bilişim"
+          };
+        }
+
         setMessages(prev => [...prev, defaultReply]);
-        triggerXpAward(10);
-        setTotalXp(prev => prev + 10);
+
+        try {
+          await db.saveMessage({
+            session_id: currentSessionId,
+            role: "assistant",
+            text: defaultReply.question ? `${defaultReply.text}\n\nSoru: ${defaultReply.question}` : defaultReply.text
+          });
+        } catch (dbErr) {
+          console.error("Failed to save fallback message in DB:", dbErr);
+        }
+
+        setTotalXp(prev => prev + earnedXp);
+
+        try {
+          const sessUpdate: StudentSession = {
+            id: currentSessionId,
+            student_name: studentName,
+            topic: selectedUnit?.title || "Bilişim",
+            total_xp: totalXp + earnedXp,
+            last_active: new Date().toISOString()
+          };
+          await db.saveSession(sessUpdate);
+        } catch (dbErr) {
+          console.error("Failed to save fallback session in DB:", dbErr);
+        }
+
       }, 1000);
     } finally {
       setIsLoading(false);
@@ -414,6 +669,46 @@ export default function App() {
               <span>+{showXpPopup.amount} XP kazandın! 🎉</span>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {showLogoutModal && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-200 dark:border-slate-700 border-b-8 p-6 max-w-sm w-full text-center space-y-4 shadow-2xl"
+            >
+              <div className="w-16 h-16 bg-rose-100 dark:bg-rose-950/30 text-rose-500 rounded-full flex items-center justify-center mx-auto text-3xl">
+                ⚠️
+              </div>
+              <h3 className="text-xl font-black text-slate-800 dark:text-white font-display uppercase tracking-wider">
+                Çıkış Yapılsın Mı?
+              </h3>
+              <p className="text-slate-600 dark:text-slate-350 text-sm font-semibold leading-relaxed">
+                Sevgili <span className="font-extrabold text-blue-600 dark:text-blue-400 uppercase">{studentName}</span>, oturumu kapatmak istediğine emin misin? Kayıtlı bilgilerin ve kazandığın unvanlar bu tarayıcıda saklanmaya devam edecek!
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutModal(false)}
+                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-black rounded-xl text-sm transition-all cursor-pointer"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmLogout}
+                  className="flex-1 py-2.5 px-4 bg-rose-500 hover:bg-rose-600 text-white font-black rounded-xl text-sm border-b-4 border-rose-700 active:border-b-0 active:translate-y-1 transition-all cursor-pointer"
+                >
+                  Evet, Çıkış Yap
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
